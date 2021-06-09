@@ -50,10 +50,10 @@ class Block {
             if(currentHash != reCalculatedBlock.hash){
             
             // Returning the Block is not valid
-                resolve(FALSE);
+                resolve(false);
             } else {
             // Returning the Block is valid
-                resolve(TRUE);
+                resolve(true);
             }
         });
     };

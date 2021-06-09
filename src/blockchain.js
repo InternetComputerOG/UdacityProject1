@@ -66,15 +66,20 @@ class Blockchain {
         return new Promise(async (resolve, reject) => {
             try {
                 let blockChainHeight = await self.getChainHeight();
-                block.height = blockChainHeight + 1;
-                block.time = new Date().getTime().toString().slice(0,-3);
-                if(block.height > 0) {
-                    block.previousBlockHash = self.chain[blockChainHeight].hash;
+                let chainValidationErrors = await self.validateChain();
+                if(chainValidationErrors.length == 0) {
+                    block.height = blockChainHeight + 1;
+                    block.time = new Date().getTime().toString().slice(0,-3);
+                    if(block.height > 0) {
+                        block.previousBlockHash = self.chain[blockChainHeight].hash;
+                    }
+                    block.hash = SHA256(JSON.stringify(block)).toString();
+                    self.chain.push(block);
+                    self.height = block.height;
+                    resolve(block);
+                } else {
+                    reject(chainValidationErrors);
                 }
-                block.hash = SHA256(JSON.stringify(block)).toString();
-                self.chain.push(block);
-                self.height = block.height;
-                resolve(block);
             } catch(err) {
                 reject(err);
             }
@@ -203,13 +208,17 @@ class Blockchain {
         let self = this;
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
-            self.chain.slice(1).forEach((block, index, arr) => {
-                block.validate().then((valid) => {
-                    if(!(valid && block.previousBlockHash == arr[index-1].hash)) {
-                        errorLog.push("block " + block.hash.toString() + " is invalid");
-                    }
-                }) 
-            })
+            let testBlocks = self.chain;
+            if(testBlocks.length > 1) {
+                testBlocks = testBlocks.slice(1);
+                testBlocks.forEach((block, index, arr) => {
+                    block.validate().then((valid) => {
+                        if(!(valid && block.previousBlockHash == self.chain[index].hash)) {
+                            errorLog.push("block " + block.hash.toString() + " is invalid");
+                        }
+                    }) 
+                })
+            }
             resolve(errorLog);
         });
     }
